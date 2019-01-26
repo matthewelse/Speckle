@@ -1,6 +1,8 @@
 #!/bin/bash
 
-TARGET_RUN="spike pk -c"
+#TARGET_RUN="spike pk" #TARGET_RUN="spike pk -c"
+SPIKE="/home/melse/Dropbox/Cambridge/iii/project/riscv-isa-sim/build/spike"
+TARGET_RUN="$SPIKE --fusion-stats pk"
 INPUT_TYPE=test # THIS MUST BE ON LINE 4 for an external sed command to work!
                 # this allows us to externally set the INPUT_TYPE this script will execute
 
@@ -14,10 +16,10 @@ for b in ${BENCHMARKS[@]}; do
 
    cd ${base_dir}/${b}
    SHORT_EXE=${b##*.} # cut off the numbers ###.short_exe
-   if [ $b == "483.xalancbmk" ]; then 
+   if [ $b == "483.xalancbmk" ]; then
       SHORT_EXE=Xalan #WTF SPEC???
    fi
-   
+
    # read the command file
    IFS=$'\n' read -d '' -r -a commands < ${base_dir}/commands/${b}.${INPUT_TYPE}.cmd
 
@@ -25,7 +27,7 @@ for b in ${BENCHMARKS[@]}; do
    count=0
    for input in "${commands[@]}"; do
       if [[ ${input:0:1} != '#' ]]; then # allow us to comment out lines in the cmd files
-         cmd="${TARGET_RUN} ${SHORT_EXE} ${input} > ${base_dir}/output/${SHORT_EXE}.${count}.out"
+         cmd="${TARGET_RUN} ${SHORT_EXE}_test ${input} 2>&1 > ${base_dir}/output/${SHORT_EXE}.${count}.out"
          echo "workload=[${cmd}]"
          eval ${cmd}
          ((count++))

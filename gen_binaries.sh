@@ -6,19 +6,23 @@
 #  * allow the user to input their desired input set
 #  * auto-handle output file generation
 
-if [ -z  "$SPEC_DIR" ]; then 
+if [ -z  "$SPEC_DIR" ]; then
    echo "  Please set the SPEC_DIR environment variable to point to your copy of SPEC CPU2006."
    exit 1
 fi
 
 CONFIG=riscv
 CONFIGFILE=${CONFIG}.cfg
-RUN="spike pk -c "
+SPIKE="LD_LIBRARY_PATH=/home/melse/Dropbox/Cambridge/iii/project/riscv-isa-sim/build/ /home/melse/Dropbox/Cambridge/iii/project/riscv-isa-sim/build/spike"
+RUN="$SPIKE -g pk "
 CMD_FILE=commands.txt
 INPUT_TYPE=test
 
 # the integer set
 BENCHMARKS=(400.perlbench 401.bzip2 403.gcc 429.mcf 445.gobmk 456.hmmer 458.sjeng 462.libquantum 464.h264ref 471.omnetpp 473.astar 483.xalancbmk)
+
+# for testing the big reduction in bzip2
+#BENCHMARKS=(400.perlbench 401.bzip2 403.gcc)
 
 # idiomatic parameter and option handling in sh
 compileFlag=false
@@ -27,10 +31,10 @@ copyFlag=false
 while test $# -gt 0
 do
    case "$1" in
-        --compile) 
+        --compile)
             compileFlag=true
             ;;
-        --run) 
+        --run)
             runFlag=true
             ;;
         --copy)
@@ -80,11 +84,11 @@ if [ "$compileFlag" = true ]; then
    for b in ${BENCHMARKS[@]}; do
       echo ${b}
       SHORT_EXE=${b##*.} # cut off the numbers ###.short_exe
-      if [ $b == "483.xalancbmk" ]; then 
+      if [ $b == "483.xalancbmk" ]; then
          SHORT_EXE=Xalan #WTF SPEC???
       fi
       BMK_DIR=$SPEC_DIR/benchspec/CPU2006/$b/run/run_base_${INPUT_TYPE}_${CONFIG}.0000;
-      
+
       echo ""
       echo "ls $SPEC_DIR/benchspec/CPU2006/$b/run"
       ls $SPEC_DIR/benchspec/CPU2006/$b/run
@@ -123,24 +127,26 @@ fi
 if [ "$runFlag" = true ]; then
 
    for b in ${BENCHMARKS[@]}; do
-   
+
       cd $BUILD_DIR/${b}_${INPUT_TYPE}
       SHORT_EXE=${b##*.} # cut off the numbers ###.short_exe
       # handle benchmarks that don't conform to the naming convention
       if [ $b == "482.sphinx3" ]; then SHORT_EXE=sphinx_livepretend; fi
       if [ $b == "483.xalancbmk" ]; then SHORT_EXE=Xalan; fi
-      
+
       # read the command file
       IFS=$'\n' read -d '' -r -a commands < $BUILD_DIR/../commands/${b}.${INPUT_TYPE}.cmd
 
+      count=0
       for input in "${commands[@]}"; do
          if [[ ${input:0:1} != '#' ]]; then # allow us to comment out lines in the cmd files
             echo "~~~Running ${b}"
-            echo "  ${RUN} ${SHORT_EXE}_base.${CONFIG} ${input}"
-            eval ${RUN} ${SHORT_EXE}_base.${CONFIG} ${input}
+            echo "  ${RUN} ${SHORT_EXE}_base.${CONFIG} ${input} 1>&2 > ..."
+            eval "${RUN} ${SHORT_EXE}_base.${CONFIG} ${input} 1>&2 > $BUILD_DIR/../output/${SHORT_EXE}.${count}"
+            ((count++))
          fi
       done
-   
+
    done
 
 fi
